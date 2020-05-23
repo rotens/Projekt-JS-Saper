@@ -1,6 +1,5 @@
 import random
 import time
-import sys
 
 
 class Field(object):
@@ -9,6 +8,7 @@ class Field(object):
         self.revealed = False
         self.mine = False
         self.value = 0
+        self.flag = False
 
     def set_mine(self):
         self.mine = True
@@ -28,6 +28,12 @@ class Field(object):
     def is_revealed(self):
         return self.revealed
 
+    def set_flag(self):
+        self.flag = True
+
+    def is_flagged(self):
+        return self.flag
+
 
 class Board(object):
 
@@ -38,10 +44,9 @@ class Board(object):
             self.mines = int((height * width) * 0.15)
         self._create_board()
         self._generate_mines()
-        #self._set_fields_values()
-
-    def get_field(self, row, col):
-        return self.board[row][col]
+        self._flagged_mines = 0
+        self._flagged_fields = 0
+        self._unrevealed_fields = height * width - self.mines
 
     def _create_board(self):
         self.board = [[Field() for _ in range(self.width)]
@@ -76,6 +81,7 @@ class Board(object):
             return 2
         else:
             self.board[row][col].set_revealed()
+            self._unrevealed_fields -= 1
             if self.board[row][col].get_value() == 0:
                 self._reveal(row, col)
             return 0
@@ -90,11 +96,32 @@ class Board(object):
                             and not self.board[i][j].is_mine():
                         if self.board[i][j].get_value() > 0:
                             self.board[i][j].set_revealed()
+                            self._unrevealed_fields -= 1
                         else:
                             self.board[i][j].set_revealed()
+                            self._unrevealed_fields -= 1
                             self._reveal(i, j)
                 except IndexError:
                     continue
+
+    def get_field(self, row, col):
+        return self.board[row][col]
+
+    def flag_field(self, row, col):
+        if self._flagged_fields == self.mines:
+            return 1
+        if self.board[row][col].is_mine():
+            self._flagged_mines += 1
+        self.board[row][col].set_flag()
+        self._flagged_fields += 1
+        return 0
+
+    def check_state(self):
+        if self._unrevealed_fields == 0:
+            return 1
+        if self._flagged_mines == self.mines:
+            return 1
+        return 0
 
     def print_board(self):
         for row in range(self.height):
@@ -120,7 +147,6 @@ class Board(object):
 
 if __name__ == "__main__":
     board = Board(9, 9)
-    board.print_board()
     random.seed(int(time.time()))
     # x = random.randint(0, 8)
     # y = random.randint(0, 8)
