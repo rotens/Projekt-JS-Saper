@@ -92,14 +92,10 @@ class Board(object):
                 if i < 0 or j < 0:
                     continue
                 try:
-                    if not self.board[i][j].is_revealed() \
-                            and not self.board[i][j].is_mine():
-                        if self.board[i][j].get_value() > 0:
-                            self.board[i][j].set_revealed()
-                            self._unrevealed_fields -= 1
-                        else:
-                            self.board[i][j].set_revealed()
-                            self._unrevealed_fields -= 1
+                    if not self.board[i][j].is_revealed():
+                        self.board[i][j].set_revealed()
+                        self._unrevealed_fields -= 1
+                        if self.board[i][j].get_value() == 0:
                             self._reveal(i, j)
                 except IndexError:
                     continue
@@ -155,6 +151,7 @@ if __name__ == "__main__":
     #     y = random.randint(0, 8)
     board.clear_field(0, 0)
     board.clear_field(0, 2)
+    board.clear_field(0, 8)
     #board.clear_field(1, 5)
     print()
     board.print_board()
