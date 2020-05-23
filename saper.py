@@ -38,7 +38,7 @@ class Board(object):
             self.mines = int((height * width) * 0.15)
         self._create_board()
         self._generate_mines()
-        self._set_fields_values()
+        #self._set_fields_values()
 
     def get_field(self, row, col):
         return self.board[row][col]
@@ -55,24 +55,19 @@ class Board(object):
             gen_col = random.randint(0, self.width-1)
             if not self.board[gen_row][gen_col].is_mine():
                 self.board[gen_row][gen_col].set_mine()
+                self._increment_fields_values(gen_row, gen_col)
                 mines_left -= 1
 
-    def _set_fields_values(self):
-        for row in range(self.height):
-            for col in range(self.width):
-                value = 0
-                for x in range(-1, 2):
-                    for y in range(-1, 2):
-                        if x == 0 and y == 0:
-                            continue
-                        if row + x < 0 or col + y < 0:
-                            continue
-                        try:
-                            if self.board[row + x][col + y].is_mine():
-                                value += 1
-                        except IndexError:
-                            continue
-                self.board[row][col].set_value(value)
+    def _increment_fields_values(self, row, col):
+        for x in range(row-1, row+2):
+            for y in range(col-1, col+2):
+                if x < 0 or y < 0:
+                    continue
+                try:
+                    cur_val = self.board[x][y].get_value()
+                    self.board[x][y].set_value(cur_val+1)
+                except IndexError:
+                    continue
 
     def clear_field(self, row, col):
         if self.board[row][col].is_mine():
