@@ -10,30 +10,6 @@ class Field(object):
         self.value = 0
         self.flag = False
 
-    def set_mine(self):
-        self.mine = True
-
-    def is_mine(self):
-        return self.mine
-    
-    def set_value(self, value):
-        self.value = value 
-
-    def get_value(self):
-        return self.value
-
-    def set_revealed(self):
-        self.revealed = True
-
-    def is_revealed(self):
-        return self.revealed
-
-    def set_flag(self):
-        self.flag = True
-
-    def is_flagged(self):
-        return self.flag
-
 
 class Board(object):
 
@@ -58,8 +34,8 @@ class Board(object):
         while mines_left > 0:
             gen_row = random.randint(0, self.height-1)
             gen_col = random.randint(0, self.width-1)
-            if not self.board[gen_row][gen_col].is_mine():
-                self.board[gen_row][gen_col].set_mine()
+            if not self.board[gen_row][gen_col].mine:
+                self.board[gen_row][gen_col].mine = True
                 self._increment_fields_values(gen_row, gen_col)
                 mines_left -= 1
 
@@ -69,20 +45,20 @@ class Board(object):
                 if x < 0 or y < 0:
                     continue
                 try:
-                    cur_val = self.board[x][y].get_value()
-                    self.board[x][y].set_value(cur_val+1)
+                    cur_val = self.board[x][y].value
+                    self.board[x][y].value = cur_val+1
                 except IndexError:
                     continue
 
     def clear_field(self, row, col):
-        if self.board[row][col].is_mine():
+        if self.board[row][col].mine:
             return 1
-        elif self.board[row][col].is_revealed():
+        elif self.board[row][col].revealed:
             return 2
         else:
-            self.board[row][col].set_revealed()
+            self.board[row][col].revealed = True
             self._unrevealed_fields -= 1
-            if self.board[row][col].get_value() == 0:
+            if self.board[row][col].value == 0:
                 self._reveal(row, col)
             return 0
 
@@ -92,10 +68,10 @@ class Board(object):
                 if i < 0 or j < 0:
                     continue
                 try:
-                    if not self.board[i][j].is_revealed():
-                        self.board[i][j].set_revealed()
+                    if not self.board[i][j].revealed:
+                        self.board[i][j].revealed = True
                         self._unrevealed_fields -= 1
-                        if self.board[i][j].get_value() == 0:
+                        if self.board[i][j].value == 0:
                             self._reveal(i, j)
                 except IndexError:
                     continue
@@ -106,9 +82,9 @@ class Board(object):
     def flag_field(self, row, col):
         if self._flagged_fields == self.mines:
             return 1
-        if self.board[row][col].is_mine():
+        if self.board[row][col].mine:
             self._flagged_mines += 1
-        self.board[row][col].set_flag()
+        self.board[row][col].flag = True
         self._flagged_fields += 1
         return 0
 
@@ -122,11 +98,11 @@ class Board(object):
     def print_board(self):
         for row in range(self.height):
             for col in range(self.width):
-                if self.board[row][col].is_revealed():
-                    if self.board[row][col].is_mine():
+                if self.board[row][col].revealed:
+                    if self.board[row][col].mine:
                         print("*  ", end='')
                     else:
-                        print("{}  ".format(self.board[row][col].get_value()), end='')
+                        print("{}  ".format(self.board[row][col].value), end='')
                 else:
                     print("#  ", end='')
             print()
@@ -134,10 +110,10 @@ class Board(object):
     def print_board2(self):
         for row in range(self.height):
             for col in range(self.width):
-                if self.board[row][col].is_mine():
+                if self.board[row][col].mine:
                     print("*  ", end='')
                 else:
-                    print("{}  ".format(self.board[row][col].get_value()), end='')
+                    print("{}  ".format(self.board[row][col].value), end='')
             print()
 
 
