@@ -73,9 +73,17 @@ class Board(object):
                 except IndexError:
                     continue
 
+    def _get_mines_cords(self):
+        for i, row in enumerate(self.fields):
+            for j, field in enumerate(row):
+                if field.mine:
+                    self.modified_fields.append((i, j))
+
     def clear_field(self, row, col):
         if self.fields[row][col].mine:
             self.fields[row][col].revealed = True
+            self.modified_fields = []
+            self._get_mines_cords()
             return 1
         elif self.fields[row][col].revealed:
             return 2
@@ -120,32 +128,33 @@ class Board(object):
             return 1
         return 0
 
-    def print_board(self):
-        for row in range(self.rows):
-            for col in range(self.cols):
-                if self.fields[row][col].revealed:
-                    if self.fields[row][col].mine:
-                        print("*  ", end='')
-                    else:
-                        print("{}  ".format(self.fields[row][col].value), end='')
-                else:
-                    print("#  ", end='')
-            print()
+    # def print_board(self):
+    #     for row in range(self.rows):
+    #         for col in range(self.cols):
+    #             if self.fields[row][col].revealed:
+    #                 if self.fields[row][col].mine:
+    #                     print("*  ", end='')
+    #                 else:
+    #                     print("{}  ".format(self.fields[row][col].value), end='')
+    #             else:
+    #                 print("#  ", end='')
+    #         print()
 
-    def print_board2(self):
-        for row in range(self.rows):
-            for col in range(self.cols):
-                if self.fields[row][col].mine:
-                    print("*  ", end='')
-                else:
-                    print("{}  ".format(self.fields[row][col].value), end='')
-            print()
+    # def print_board2(self):
+    #     for row in range(self.rows):
+    #         for col in range(self.cols):
+    #             if self.fields[row][col].mine:
+    #                 print("*  ", end='')
+    #             else:
+    #                 print("{}  ".format(self.fields[row][col].value), end='')
+    #         print()
 
 
 class DrawBoard(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+        self.fields = []
         self.pack()
 
     def draw_board(self, board):
@@ -160,21 +169,24 @@ class DrawBoard(tk.Frame):
         for cords in board.modified_fields:
             row = cords[0]
             col = cords[1]
-            if board.fields[row][col].revealed:
+            if not board.fields[row][col].mine:
                 self.fields[row][col].config(text=board.fields[row][col].value,
                                              relief="sunken")
+            else:
+                self.fields[row][col]['text'] = "*"
+                self.fields[row][col]['fg'] = "red"
+                self.fields[row][col]['relief'] = "sunken"
 
     def draw_mines(self, board, row, col):
-        self.fields[row][col].config(text="*",
-                                     fg="red",
-                                     relief="sunken")
-        # for i, row in enumerate(self.fields):
-        #     for j, el in enumerate(row):
-        #         if board.fields[i][j].mine:
-        #             self.fields[i][j].config(text="*",
-        #                                      fg="black",
-        #                                      relief="sunken")
-        #             board.fields[i][j].revealed = True
+        self.fields[row][col]['text'] = "*"
+        self.fields[row][col]['fg'] = "red"
+        self.fields[row][col]['relief'] = "sunken"
+
+        for cords in board.modified_fields:
+            row = cords[0]
+            col = cords[1]
+            self.fields[row][col]['text'] = "*"
+            self.fields[row][col]['relief'] = "sunken"
 
 
 class Controller(object):
@@ -205,7 +217,7 @@ if __name__ == "__main__":
     #     x = random.randint(0, 8)
     #     y = random.randint(0, 8)
     #board.clear_field(0, 0)
-    board.print_board2()
+    #board.print_board2()
     #game_input = Controller()
     root = tk.Tk()
     db = DrawBoard(master=root)
