@@ -18,12 +18,12 @@ class BoardParametersError(Exception):
 
 
 class Field(object):
-
     def __init__(self):
         self.revealed = False
         self.mine = False
         self.value = 0
         self.flag = False
+        self.qmark = False
 
 
 class Board(object):
@@ -80,12 +80,14 @@ class Board(object):
                     self.modified_fields.append((i, j))
 
     def clear_field(self, row, col):
+        if self.fields[row][col].flag:
+            return 2
         if self.fields[row][col].mine:
             self.fields[row][col].revealed = True
             self.modified_fields = []
             self._get_mines_cords()
             return 1
-        elif self.fields[row][col].revealed:
+        if self.fields[row][col].revealed:
             return 2
         else:
             self.fields[row][col].revealed = True
@@ -113,12 +115,22 @@ class Board(object):
                     continue
 
     def flag_field(self, row, col):
+        if self.fields[row][col].revealed:
+            return 1
+        if self.fields[row][col].flag:
+            self.fields[row][col].flag = False
+            self.fields[row][col].qmark = True
+            return 2
+        if self.fields[row][col].qmark:
+            self.fields[row][col].qmark = False
+            return 3
         if self._flagged_fields == self.mines:
             return 1
         if self.fields[row][col].mine:
             self._flagged_mines += 1
         self.fields[row][col].flag = True
         self._flagged_fields += 1
+
         return 0
 
     def check_state(self):
@@ -170,11 +182,7 @@ class DrawBoard(tk.Frame):
             row = cords[0]
             col = cords[1]
             if not board.fields[row][col].mine:
-                self.fields[row][col].config(text=board.fields[row][col].value,
-                                             relief="sunken")
-            else:
-                self.fields[row][col]['text'] = "*"
-                self.fields[row][col]['fg'] = "red"
+                self.fields[row][col]['text'] = board.fields[row][col].value
                 self.fields[row][col]['relief'] = "sunken"
 
     def draw_mines(self, board, row, col):
@@ -188,6 +196,14 @@ class DrawBoard(tk.Frame):
             self.fields[row][col]['text'] = "*"
             self.fields[row][col]['relief'] = "sunken"
 
+    def draw_flag(self, board, row, col, option):
+        if option == 1:
+            self.fields[row][col]['text'] = "F"
+        elif option == 2:
+            self.fields[row][col]['text'] = "?"
+        else:
+            self.fields[row][col]['text'] = ""
+
 
 class Controller(object):
     def __init__(self, board, db):
@@ -198,13 +214,29 @@ class Controller(object):
     def create_events(self):
         for i, row in enumerate(self.db.fields):
             for j, el in enumerate(row):
-                el.config(command=lambda x=i, y=j: self.on_click(x, y))
+                el.config(command=lambda x=i, y=j: self.left_click(x, y))
+                el.bind("<Button-3>", lambda event, x=i, y=j: self.right_click(x, y))
 
-    def on_click(self, row, col):
-        if self.board.clear_field(row, col) == 1:
+    def left_click(self, row, col):
+        val = self.board.clear_field(row, col)
+        if val == 1:
             self.db.draw_mines(self.board, row, col)
-        else:
+        elif val == 0:
             self.db.update_fields(self.board)
+        self._game_state()
+
+    def right_click(self, row, col):
+        val = self.board.flag_field(row, col)
+        option = 0
+        if val == 0:
+            option = 1
+        elif val == 2:
+            option = 2
+        self.db.draw_flag(self.board, row, col, option)
+        self._game_state()
+
+    def _game_state(self):
+        self.board.check_state()
 
 
 if __name__ == "__main__":
