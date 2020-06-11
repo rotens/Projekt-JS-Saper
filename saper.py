@@ -27,7 +27,6 @@ class Field(object):
 
 
 class Board(object):
-
     def __init__(self):
         self.fields = []
         self.modified_fields = []
@@ -120,6 +119,7 @@ class Board(object):
         if self.fields[row][col].flag:
             self.fields[row][col].flag = False
             self.fields[row][col].qmark = True
+            self._flagged_fields -= 1
             return 2
         if self.fields[row][col].qmark:
             self.fields[row][col].qmark = False
@@ -167,15 +167,39 @@ class DrawBoard(tk.Frame):
         super().__init__(master)
         self.master = master
         self.fields = []
+        self.board_frame = tk.Frame(master=self)
+        self.frame2 = tk.Frame(master=self)
+        self.board_frame.pack()
+        self.frame2.pack()
         self.pack()
+        self._draw_frame()
+
+
+    def _initial_board(self):
+        pass
+
+    def _draw_frame(self):
+        self.ent_rows = tk.Entry(master=self.frame2, width=3)
+        self.ent_columns = tk.Entry(master=self.frame2,  width=3)
+        self.ent_mines = tk.Entry(master=self.frame2, width=3)
+        self.btn_start_game = tk.Button(master=self.frame2, text="Start game")
+        self.ent_rows.pack()
+        self.ent_columns.pack()
+        self.ent_mines.pack()
+        self.btn_start_game.pack()
 
     def draw_board(self, board):
-        self.fields = [[tk.Button(self, height=1, width=2) for _ in row]
+        self.fields = [[tk.Button(master=self.board_frame, height=1, width=2) for _ in row]
                        for row in board.fields]
 
         for i, row in enumerate(self.fields):
             for j, el in enumerate(row):
                 el.grid(row=i, column=j)
+
+    def destroy_fields(self):
+        for i, row in enumerate(self.fields):
+            for j, el in enumerate(row):
+                el.destroy()
 
     def update_fields(self, board):
         for cords in board.modified_fields:
@@ -217,6 +241,17 @@ class Controller(object):
                 el.config(command=lambda x=i, y=j: self.left_click(x, y))
                 el.bind("<Button-3>", lambda event, x=i, y=j: self.right_click(x, y))
 
+        self.db.btn_start_game.bind("<Button-1>", lambda event: self.start_game())
+
+    def start_game(self):
+        rows = int(self.db.ent_rows.get())
+        columns = int(self.db.ent_columns.get())
+        mines = int(self.db.ent_mines.get())
+        self.board.create_board(rows, columns, mines)
+        self.db.destroy_fields()
+        self.db.draw_board(self.board)
+        self.create_events()
+
     def left_click(self, row, col):
         val = self.board.clear_field(row, col)
         if val == 1:
@@ -242,15 +277,6 @@ class Controller(object):
 if __name__ == "__main__":
     board = Board()
     board.create_board(15, 15, 30)
-   #random.seed(int(time.time()))
-    # x = random.randint(0, 8)
-    # y = random.randint(0, 8)
-    # while board.clear_field(x, y) != 2:
-    #     x = random.randint(0, 8)
-    #     y = random.randint(0, 8)
-    #board.clear_field(0, 0)
-    #board.print_board2()
-    #game_input = Controller()
     root = tk.Tk()
     db = DrawBoard(master=root)
     db.draw_board(board)
