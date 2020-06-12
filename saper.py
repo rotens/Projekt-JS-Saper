@@ -167,22 +167,28 @@ class DrawBoard(tk.Frame):
         super().__init__(master)
         self.master = master
         self.fields = []
+        self.top_frame = tk.Frame(master=self)
         self.board_frame = tk.Frame(master=self)
-        self.frame2 = tk.Frame(master=self)
+        self.bottom_frame = tk.Frame(master=self)
+        self.top_frame.pack()
         self.board_frame.pack()
-        self.frame2.pack()
+        self.bottom_frame.pack()
         self.pack()
-        self._draw_frame()
-
+        self._draw_top_frame()
+        self._draw_bottom_frame()
 
     def _initial_board(self):
         pass
 
-    def _draw_frame(self):
-        self.ent_rows = tk.Entry(master=self.frame2, width=3)
-        self.ent_columns = tk.Entry(master=self.frame2,  width=3)
-        self.ent_mines = tk.Entry(master=self.frame2, width=3)
-        self.btn_start_game = tk.Button(master=self.frame2, text="Start game")
+    def _draw_top_frame(self):
+        self.label = tk.Label(master=self.top_frame, text="test")
+        self.label.pack()
+
+    def _draw_bottom_frame(self):
+        self.ent_rows = tk.Entry(master=self.bottom_frame, width=3)
+        self.ent_columns = tk.Entry(master=self.bottom_frame,  width=3)
+        self.ent_mines = tk.Entry(master=self.bottom_frame, width=3)
+        self.btn_start_game = tk.Button(master=self.bottom_frame, text="Start game")
         self.ent_rows.pack()
         self.ent_columns.pack()
         self.ent_mines.pack()
@@ -193,13 +199,13 @@ class DrawBoard(tk.Frame):
                        for row in board.fields]
 
         for i, row in enumerate(self.fields):
-            for j, el in enumerate(row):
-                el.grid(row=i, column=j)
+            for j, field in enumerate(row):
+                field.grid(row=i, column=j)
 
     def destroy_fields(self):
-        for i, row in enumerate(self.fields):
-            for j, el in enumerate(row):
-                el.destroy()
+        for _, row in enumerate(self.fields):
+            for _, field in enumerate(row):
+                field.destroy()
 
     def update_fields(self, board):
         for cords in board.modified_fields:
@@ -244,13 +250,21 @@ class Controller(object):
         self.db.btn_start_game.bind("<Button-1>", lambda event: self.start_game())
 
     def start_game(self):
-        rows = int(self.db.ent_rows.get())
-        columns = int(self.db.ent_columns.get())
-        mines = int(self.db.ent_mines.get())
-        self.board.create_board(rows, columns, mines)
-        self.db.destroy_fields()
-        self.db.draw_board(self.board)
-        self.create_events()
+        try:
+            rows = int(self.db.ent_rows.get())
+            columns = int(self.db.ent_columns.get())
+            mines = int(self.db.ent_mines.get())
+        except ValueError:
+            return
+
+        try:
+            self.board.create_board(rows, columns, mines)
+        except BoardParametersError:
+            print("sram psa jak sra")
+        else:
+            self.db.destroy_fields()
+            self.db.draw_board(self.board)
+            self.create_events()
 
     def left_click(self, row, col):
         val = self.board.clear_field(row, col)
