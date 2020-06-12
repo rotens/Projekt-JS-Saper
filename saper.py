@@ -34,7 +34,7 @@ class Board(object):
         self.cols = 0
         self.mines = 0
         self._flagged_mines = 0
-        self._flagged_fields = 0
+        self.flagged_fields = 0
         self._unrevealed_fields = 0
 
     def create_board(self, rows, cols, mines):
@@ -49,6 +49,9 @@ class Board(object):
         self.mines = mines
         self.fields = [[Field() for _ in range(self.cols)]
                        for _ in range(self.rows)]
+        self._unrevealed_fields = self.rows * self.cols - self.mines
+        self._flagged_mines = 0
+        self.flagged_fields = 0
         self._generate_mines()
 
     def _generate_mines(self):
@@ -116,20 +119,25 @@ class Board(object):
     def flag_field(self, row, col):
         if self.fields[row][col].revealed:
             return 1
+
         if self.fields[row][col].flag:
             self.fields[row][col].flag = False
             self.fields[row][col].qmark = True
-            self._flagged_fields -= 1
+            self.flagged_fields -= 1
             return 2
+
         if self.fields[row][col].qmark:
             self.fields[row][col].qmark = False
             return 3
-        if self._flagged_fields == self.mines:
+
+        if self.flagged_fields == self.mines:
             return 1
+
         if self.fields[row][col].mine:
             self._flagged_mines += 1
+
         self.fields[row][col].flag = True
-        self._flagged_fields += 1
+        self.flagged_fields += 1
 
         return 0
 
@@ -175,24 +183,50 @@ class DrawBoard(tk.Frame):
         self.bottom_frame.pack()
         self.pack()
         self._draw_top_frame()
+        self._initial_board()
         self._draw_bottom_frame()
 
     def _initial_board(self):
-        pass
+        self.fields = [[tk.Button(master=self.board_frame) for _ in range(10)]
+                       for _ in range(10)]
+
+        for i, row in enumerate(self.fields):
+            for j, field in enumerate(row):
+                field["height"] = 1
+                field["width"] = 2
+                field["state"] = tk.DISABLED
+                field.grid(row=i, column=j)
 
     def _draw_top_frame(self):
-        self.label = tk.Label(master=self.top_frame, text="test")
-        self.label.pack()
+        self.flag_frame = tk.Frame(master=self.top_frame)
+        self.flag_frame.pack()
+        self.label = tk.Label(master=self.flag_frame, text="Flags:")
+        self.label2 = tk.Label(master=self.flag_frame, text="0")
+        self.label.grid(row=0, column=0)
+        self.label2.grid(row=0, column=1)
 
     def _draw_bottom_frame(self):
-        self.ent_rows = tk.Entry(master=self.bottom_frame, width=3)
-        self.ent_columns = tk.Entry(master=self.bottom_frame,  width=3)
-        self.ent_mines = tk.Entry(master=self.bottom_frame, width=3)
+        self.lb_message = tk.Label(master=self.bottom_frame)
+        self.lb_message.pack()
+
+        self.entries_frame = tk.Frame(master=self.bottom_frame)
+        self.entries_frame.pack()
+
+        self.ent_rows = tk.Entry(master=self.entries_frame, width=3)
+        self.ent_columns = tk.Entry(master=self.entries_frame,  width=3)
+        self.ent_mines = tk.Entry(master=self.entries_frame, width=3)
+        self.ent_rows.grid(row=0, column=0)
+        self.ent_columns.grid(row=0, column=1)
+        self.ent_mines.grid(row=0, column=2)
+
         self.btn_start_game = tk.Button(master=self.bottom_frame, text="Start game")
-        self.ent_rows.pack()
-        self.ent_columns.pack()
-        self.ent_mines.pack()
         self.btn_start_game.pack()
+
+    def draw_message(self, message, color="black"):
+        self.lb_message["text"] = message
+
+    def draw_flag_counter(self, board):
+        self.label2["text"] = board.flagged_fields
 
     def draw_board(self, board):
         self.fields = [[tk.Button(master=self.board_frame, height=1, width=2) for _ in row]
@@ -244,8 +278,8 @@ class Controller(object):
     def create_events(self):
         for i, row in enumerate(self.db.fields):
             for j, el in enumerate(row):
-                el.config(command=lambda x=i, y=j: self.left_click(x, y))
-                el.bind("<Button-3>", lambda event, x=i, y=j: self.right_click(x, y))
+                el.config(command=lambda x=i, y=j: self._left_click(x, y))
+                el.bind("<Button-3>", lambda event, x=i, y=j: self._right_click(x, y))
 
         self.db.btn_start_game.bind("<Button-1>", lambda event: self.start_game())
 
@@ -255,26 +289,32 @@ class Controller(object):
             columns = int(self.db.ent_columns.get())
             mines = int(self.db.ent_mines.get())
         except ValueError:
+            self.db.draw_message("Nieprawidlowe wartosci parametrow planszy")
             return
 
         try:
             self.board.create_board(rows, columns, mines)
         except BoardParametersError:
-            print("sram psa jak sra")
+            self.db.draw_message("Nieprawidlowe parametry planszy")
+            return
         else:
             self.db.destroy_fields()
             self.db.draw_board(self.board)
             self.create_events()
+            self.db.draw_message("")
+            self.db.draw_flag_counter(self.board)
 
-    def left_click(self, row, col):
+    def _left_click(self, row, col):
+        """Funkcja wywoływana przy naciśnięciu pola lewym przyciskiem myszy"""
         val = self.board.clear_field(row, col)
         if val == 1:
             self.db.draw_mines(self.board, row, col)
+            self._end_game(option=0)
         elif val == 0:
             self.db.update_fields(self.board)
         self._game_state()
 
-    def right_click(self, row, col):
+    def _right_click(self, row, col):
         val = self.board.flag_field(row, col)
         option = 0
         if val == 0:
@@ -282,19 +322,33 @@ class Controller(object):
         elif val == 2:
             option = 2
         self.db.draw_flag(self.board, row, col, option)
+        self.db.draw_flag_counter(self.board)
         self._game_state()
 
     def _game_state(self):
-        self.board.check_state()
+        state = self.board.check_state()
+        if state == 1:
+            self._end_game(option=1)
+
+    def _end_game(self, option):
+        if option == 1:
+            self.db.draw_message("You have won!")
+        else:
+            self.db.draw_message("You have lost!")
+
+
+def main():
+    board = Board()
+    #board.create_board(15, 15, 30)
+    root = tk.Tk()
+    db = DrawBoard(master=root)
+    #db.draw_board(board)
+    #db.initial_board()
+    con = Controller(board, db)
+    db.mainloop()
 
 
 if __name__ == "__main__":
-    board = Board()
-    board.create_board(15, 15, 30)
-    root = tk.Tk()
-    db = DrawBoard(master=root)
-    db.draw_board(board)
-    con = Controller(board, db)
-    db.mainloop()
+    main()
 
 
