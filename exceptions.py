@@ -1,0 +1,2 @@
+class BoardParametersError(Exception):
+    pass
