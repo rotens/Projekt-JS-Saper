@@ -75,7 +75,7 @@ class Board(object):
                 except IndexError:
                     continue
 
-    def _get_mines_cords(self):
+    def get_mines_cords(self):
         for i, row in enumerate(self.fields):
             for j, field in enumerate(row):
                 if field.mine:
@@ -87,7 +87,7 @@ class Board(object):
         if self.fields[row][col].mine:
             self.fields[row][col].revealed = True
             self.modified_fields = []
-            self._get_mines_cords()
+            self.get_mines_cords()
             return 1
         if self.fields[row][col].revealed:
             return 2
@@ -120,18 +120,20 @@ class Board(object):
         if self.fields[row][col].revealed:
             return 1
 
+        if self.flagged_fields == self.mines:
+            return 1
+
         if self.fields[row][col].flag:
             self.fields[row][col].flag = False
             self.fields[row][col].qmark = True
             self.flagged_fields -= 1
+            if self.fields[row][col].mine:
+                self._flagged_mines -= 1
             return 2
 
         if self.fields[row][col].qmark:
             self.fields[row][col].qmark = False
             return 3
-
-        if self.flagged_fields == self.mines:
-            return 1
 
         if self.fields[row][col].mine:
             self._flagged_mines += 1
@@ -148,17 +150,8 @@ class Board(object):
             return 1
         return 0
 
-    # def print_board(self):
-    #     for row in range(self.rows):
-    #         for col in range(self.cols):
-    #             if self.fields[row][col].revealed:
-    #                 if self.fields[row][col].mine:
-    #                     print("*  ", end='')
-    #                 else:
-    #                     print("{}  ".format(self.fields[row][col].value), end='')
-    #             else:
-    #                 print("#  ", end='')
-    #         print()
+    def is_revealed(self, row, col):
+        return self.fields[row][col].revealed
 
     # def print_board2(self):
     #     for row in range(self.rows):
@@ -202,8 +195,12 @@ class DrawBoard(tk.Frame):
         self.flag_frame.pack()
         self.label = tk.Label(master=self.flag_frame, text="Flags:")
         self.label2 = tk.Label(master=self.flag_frame, text="0")
+        self.lb_mines = tk.Label(master=self.flag_frame, text="Mines:")
+        self.lb_mines_number = tk.Label(master=self.flag_frame, text="0")
         self.label.grid(row=0, column=0)
         self.label2.grid(row=0, column=1)
+        self.lb_mines.grid(row=0, column=2)
+        self.lb_mines_number.grid(row=0, column=3)
 
     def _draw_bottom_frame(self):
         self.lb_message = tk.Label(master=self.bottom_frame)
@@ -228,6 +225,9 @@ class DrawBoard(tk.Frame):
     def draw_flag_counter(self, board):
         self.label2["text"] = board.flagged_fields
 
+    def draw_mines_number(self, board):
+        self.lb_mines_number['text'] = board.mines
+
     def draw_board(self, board):
         self.fields = [[tk.Button(master=self.board_frame, height=1, width=2) for _ in row]
                        for row in board.fields]
@@ -242,23 +242,21 @@ class DrawBoard(tk.Frame):
                 field.destroy()
 
     def update_fields(self, board):
-        for cords in board.modified_fields:
-            row = cords[0]
-            col = cords[1]
+        for row, col in board.modified_fields:
             if not board.fields[row][col].mine:
                 self.fields[row][col]['text'] = board.fields[row][col].value
-                self.fields[row][col]['relief'] = "sunken"
+                self.fields[row][col]['relief'] = tk.SUNKEN
+                self.fields[row][col]['state'] = tk.DISABLED
+                self.fields[row][col].unbind("<Button-3>")
 
     def draw_mines(self, board, row, col):
-        self.fields[row][col]['text'] = "*"
-        self.fields[row][col]['fg'] = "red"
-        self.fields[row][col]['relief'] = "sunken"
+        for i, j in board.modified_fields:
+            self.fields[i][j]['text'] = "*"
+            self.fields[i][j]['disabledforeground'] = "black"
+            self.fields[i][j]['relief'] = "sunken"
+            self.fields[i][j]['state'] = tk.DISABLED
 
-        for cords in board.modified_fields:
-            row = cords[0]
-            col = cords[1]
-            self.fields[row][col]['text'] = "*"
-            self.fields[row][col]['relief'] = "sunken"
+        self.fields[row][col]['disabledforeground'] = "red"
 
     def draw_flag(self, board, row, col, option):
         if option == 1:
@@ -267,6 +265,16 @@ class DrawBoard(tk.Frame):
             self.fields[row][col]['text'] = "?"
         else:
             self.fields[row][col]['text'] = ""
+
+    def disable_fields(self):
+        for _, row in enumerate(self.fields):
+            for _, field in enumerate(row):
+                field["state"] = tk.DISABLED
+                field.unbind("<Button-3>")
+
+    def cheat(self, board):
+        for row, col in board.modified_fields:
+            self.fields[row][col]["bg"] = "red"
 
 
 class Controller(object):
@@ -282,6 +290,7 @@ class Controller(object):
                 el.bind("<Button-3>", lambda event, x=i, y=j: self._right_click(x, y))
 
         self.db.btn_start_game.bind("<Button-1>", lambda event: self.start_game())
+        self.db.master.bind("xyzzx", lambda event: self._cheat())
 
     def start_game(self):
         try:
@@ -302,6 +311,7 @@ class Controller(object):
             self.db.draw_board(self.board)
             self.create_events()
             self.db.draw_message("")
+            self.db.draw_mines_number(self.board)
             self.db.draw_flag_counter(self.board)
 
     def _left_click(self, row, col):
@@ -331,10 +341,15 @@ class Controller(object):
             self._end_game(option=1)
 
     def _end_game(self, option):
+        self.db.disable_fields()
         if option == 1:
             self.db.draw_message("You have won!")
         else:
             self.db.draw_message("You have lost!")
+
+    def _cheat(self):
+        self.board.get_mines_cords()
+        self.db.cheat(self.board)
 
 
 def main():
