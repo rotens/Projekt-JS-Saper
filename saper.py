@@ -12,6 +12,25 @@ MINES_MIN = 0
 FIELD_WIDTH = 2
 FIELD_HEIGHT = 1
 
+# Kolory
+BASE03 = "#002b36"
+BASE02 = "#073642"
+BASE01 = "#586e75"
+BASE00 = "#657b83"
+BASE0 = "#839496"
+BASE1 = "#93a1a1"
+BASE2 = "#eee8d5"
+BASE3 = "#fdf6e3"
+YELLOW = "#b58900"
+ORANGE = "#cb4b16"
+RED = "#dc322f"
+MAGENTA = "#d33682"
+VIOLET = "#6c71c4"
+BLUE = "#268bd2"
+CYAN = "#2aa198"
+GREEN = "#859900"
+WHITE = "#FFFFFF"
+
 
 class BoardParametersError(Exception):
     pass
@@ -21,7 +40,7 @@ class Field(object):
     def __init__(self):
         self.revealed = False
         self.mine = False
-        self.value = 0
+        self.value = 0  # Liczba bomb w pobliżu
         self.flag = False
         self.qmark = False
 
@@ -30,6 +49,7 @@ class Board(object):
     def __init__(self):
         self.fields = []
         self.modified_fields = []
+        self.mines_cords = []
         self.rows = 0
         self.cols = 0
         self.mines = 0
@@ -40,10 +60,13 @@ class Board(object):
     def create_board(self, rows, cols, mines):
         if rows < ROWS_MIN or rows > ROWS_MAX:
             raise BoardParametersError()
+
         if cols < COLUMNS_MIN or cols > COLUMNS_MAX:
             raise BoardParametersError()
+
         if mines < MINES_MIN or mines > rows*cols:
             raise BoardParametersError()
+
         self.rows = rows
         self.cols = cols
         self.mines = mines
@@ -52,17 +75,19 @@ class Board(object):
         self._unrevealed_fields = self.rows * self.cols - self.mines
         self._flagged_mines = 0
         self.flagged_fields = 0
+        self.mines_cords = []
         self._generate_mines()
 
     def _generate_mines(self):
         mines_left = self.mines
-        random.seed(1121)
+        #random.seed(1121)
         while mines_left > 0:
             gen_row = random.randint(0, self.rows-1)
             gen_col = random.randint(0, self.cols-1)
             if not self.fields[gen_row][gen_col].mine:
                 self.fields[gen_row][gen_col].mine = True
                 self._increment_fields_values(gen_row, gen_col)
+                self.mines_cords.append((gen_row, gen_col))
                 mines_left -= 1
 
     def _increment_fields_values(self, row, col):
@@ -75,20 +100,14 @@ class Board(object):
                 except IndexError:
                     continue
 
-    def get_mines_cords(self):
-        for i, row in enumerate(self.fields):
-            for j, field in enumerate(row):
-                if field.mine:
-                    self.modified_fields.append((i, j))
-
     def clear_field(self, row, col):
         if self.fields[row][col].flag:
             return 2
+
         if self.fields[row][col].mine:
             self.fields[row][col].revealed = True
-            self.modified_fields = []
-            self.get_mines_cords()
             return 1
+
         if self.fields[row][col].revealed:
             return 2
         else:
@@ -153,17 +172,32 @@ class Board(object):
     def is_revealed(self, row, col):
         return self.fields[row][col].revealed
 
-    # def print_board2(self):
-    #     for row in range(self.rows):
-    #         for col in range(self.cols):
-    #             if self.fields[row][col].mine:
-    #                 print("*  ", end='')
-    #             else:
-    #                 print("{}  ".format(self.fields[row][col].value), end='')
-    #         print()
+    def get_value(self, row, col):
+        return self.fields[row][col].value
+
+    def print_board2(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if self.fields[row][col].mine:
+                    print("*  ", end='')
+                else:
+                    print("{}  ".format(self.fields[row][col].value), end='')
+            print()
 
 
 class DrawBoard(tk.Frame):
+
+    values_colors = {
+        1: BLUE,
+        2: GREEN,
+        3: RED,
+        4: VIOLET,
+        5: CYAN,
+        6: YELLOW,
+        7: MAGENTA,
+        8: BASE1
+    }
+
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
@@ -174,6 +208,7 @@ class DrawBoard(tk.Frame):
         self.top_frame.pack()
         self.board_frame.pack()
         self.bottom_frame.pack()
+        self['bg'] = BASE02
         self.pack()
         self._draw_top_frame()
         self._initial_board()
@@ -185,18 +220,19 @@ class DrawBoard(tk.Frame):
 
         for i, row in enumerate(self.fields):
             for j, field in enumerate(row):
-                field["height"] = 1
-                field["width"] = 2
+                field["height"] = FIELD_HEIGHT
+                field["width"] = FIELD_WIDTH
                 field["state"] = tk.DISABLED
+                field['bg'] = BASE00
                 field.grid(row=i, column=j)
 
     def _draw_top_frame(self):
         self.flag_frame = tk.Frame(master=self.top_frame)
         self.flag_frame.pack()
-        self.label = tk.Label(master=self.flag_frame, text="Flags:")
-        self.label2 = tk.Label(master=self.flag_frame, text="0")
-        self.lb_mines = tk.Label(master=self.flag_frame, text="Mines:")
-        self.lb_mines_number = tk.Label(master=self.flag_frame, text="0")
+        self.label = tk.Label(master=self.flag_frame, text="Flags:", bg=BASE02, fg=WHITE)
+        self.label2 = tk.Label(master=self.flag_frame, text="0", bg=BASE02, fg=WHITE)
+        self.lb_mines = tk.Label(master=self.flag_frame, text="Mines:", bg=BASE02, fg=WHITE)
+        self.lb_mines_number = tk.Label(master=self.flag_frame, text="0", bg=BASE02, fg=WHITE)
         self.label.grid(row=0, column=0)
         self.label2.grid(row=0, column=1)
         self.lb_mines.grid(row=0, column=2)
@@ -210,16 +246,21 @@ class DrawBoard(tk.Frame):
         self.entries_frame.pack()
 
         self.ent_rows = tk.Entry(master=self.entries_frame, width=3)
-        self.ent_columns = tk.Entry(master=self.entries_frame,  width=3)
+        self.lb_x = tk.Label(master=self.entries_frame, text="x")
+        self.lb_m = tk.Label(master=self.entries_frame, text="m:")
+        self.lb_x.grid(row=0, column=1)
+        self.lb_m.grid(row=0, column=3)
+        self.ent_columns = tk.Entry(master=self.entries_frame, width=3)
         self.ent_mines = tk.Entry(master=self.entries_frame, width=3)
         self.ent_rows.grid(row=0, column=0)
-        self.ent_columns.grid(row=0, column=1)
-        self.ent_mines.grid(row=0, column=2)
+        self.ent_columns.grid(row=0, column=2)
+        self.ent_mines.grid(row=0, column=4)
 
         self.btn_start_game = tk.Button(master=self.bottom_frame, text="Start game")
         self.btn_start_game.pack()
 
     def draw_message(self, message, color="black"):
+        self.lb_message["fg"] = color
         self.lb_message["text"] = message
 
     def draw_flag_counter(self, board):
@@ -229,11 +270,14 @@ class DrawBoard(tk.Frame):
         self.lb_mines_number['text'] = board.mines
 
     def draw_board(self, board):
-        self.fields = [[tk.Button(master=self.board_frame, height=1, width=2) for _ in row]
+        self.fields = [[tk.Button(master=self.board_frame) for _ in row]
                        for row in board.fields]
 
         for i, row in enumerate(self.fields):
             for j, field in enumerate(row):
+                field['bg'] = BASE01
+                field['height'] = FIELD_HEIGHT
+                field['width'] = FIELD_WIDTH
                 field.grid(row=i, column=j)
 
     def destroy_fields(self):
@@ -244,19 +288,24 @@ class DrawBoard(tk.Frame):
     def update_fields(self, board):
         for row, col in board.modified_fields:
             if not board.fields[row][col].mine:
-                self.fields[row][col]['text'] = board.fields[row][col].value
                 self.fields[row][col]['relief'] = tk.SUNKEN
                 self.fields[row][col]['state'] = tk.DISABLED
+                self.fields[row][col]['bg'] = BASE02
                 self.fields[row][col].unbind("<Button-3>")
+                if board.get_value(row, col) != 0:
+                    self.fields[row][col]['text'] = board.get_value(row, col)
+                    color = DrawBoard.values_colors[board.get_value(row, col)]
+                    self.fields[row][col]['disabledforeground'] = color
 
     def draw_mines(self, board, row, col):
-        for i, j in board.modified_fields:
+        for i, j in board.mines_cords:
             self.fields[i][j]['text'] = "*"
-            self.fields[i][j]['disabledforeground'] = "black"
+            self.fields[i][j]['disabledforeground'] = WHITE
+            self.fields[i][j]['bg'] = BASE02
             self.fields[i][j]['relief'] = "sunken"
             self.fields[i][j]['state'] = tk.DISABLED
 
-        self.fields[row][col]['disabledforeground'] = "red"
+        self.fields[row][col]['disabledforeground'] = RED
 
     def draw_flag(self, board, row, col, option):
         if option == 1:
@@ -273,21 +322,21 @@ class DrawBoard(tk.Frame):
                 field.unbind("<Button-3>")
 
     def cheat(self, board):
-        for row, col in board.modified_fields:
-            self.fields[row][col]["bg"] = "red"
+        for row, col in board.mines_cords:
+            self.fields[row][col]["bg"] = "#002b36"
 
 
 class Controller(object):
     def __init__(self, board, db):
         self.board = board
         self.db = db
-        self.create_events()
+        self.bind_events()
 
-    def create_events(self):
+    def bind_events(self):
         for i, row in enumerate(self.db.fields):
-            for j, el in enumerate(row):
-                el.config(command=lambda x=i, y=j: self._left_click(x, y))
-                el.bind("<Button-3>", lambda event, x=i, y=j: self._right_click(x, y))
+            for j, field in enumerate(row):
+                field.config(command=lambda x=i, y=j: self._left_click(x, y))
+                field.bind("<Button-3>", lambda event, x=i, y=j: self._right_click(x, y))
 
         self.db.btn_start_game.bind("<Button-1>", lambda event: self.start_game())
         self.db.master.bind("xyzzx", lambda event: self._cheat())
@@ -309,10 +358,11 @@ class Controller(object):
         else:
             self.db.destroy_fields()
             self.db.draw_board(self.board)
-            self.create_events()
+            self.bind_events()
             self.db.draw_message("")
             self.db.draw_mines_number(self.board)
             self.db.draw_flag_counter(self.board)
+            self.board.print_board2()
 
     def _left_click(self, row, col):
         """Funkcja wywoływana przy naciśnięciu pola lewym przyciskiem myszy"""
@@ -326,11 +376,13 @@ class Controller(object):
 
     def _right_click(self, row, col):
         val = self.board.flag_field(row, col)
+
         option = 0
         if val == 0:
             option = 1
         elif val == 2:
             option = 2
+
         self.db.draw_flag(self.board, row, col, option)
         self.db.draw_flag_counter(self.board)
         self._game_state()
@@ -343,12 +395,11 @@ class Controller(object):
     def _end_game(self, option):
         self.db.disable_fields()
         if option == 1:
-            self.db.draw_message("You have won!")
+            self.db.draw_message("You have won!", GREEN)
         else:
-            self.db.draw_message("You have lost!")
+            self.db.draw_message("You have lost!", RED)
 
     def _cheat(self):
-        self.board.get_mines_cords()
         self.db.cheat(self.board)
 
 
@@ -356,6 +407,7 @@ def main():
     board = Board()
     #board.create_board(15, 15, 30)
     root = tk.Tk()
+    root.resizable(None)
     db = DrawBoard(master=root)
     #db.draw_board(board)
     #db.initial_board()
