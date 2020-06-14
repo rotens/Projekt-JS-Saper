@@ -1,18 +1,26 @@
 import tkinter as tk
 
-import Board
-import GameWindow
-import Minesweeper
+import board
+import game_window
+import minesweeper
 
 
 def main():
+    # Inicjalizacja biblioteki Tkinter
     root = tk.Tk()
+    # Zablokowanie możliwości zmiany rozmiaru okna
     root.resizable(width=False, height=False)
-    gw = GameWindow.GameWindow(master=root)
-    board = Board.Board()
-    ms = Minesweeper.Minesweeper(board, gw)
+    # Tworzenie obiektu klasy GameWindow
+    # Do konstruktora przekazywany jest główny widget
+    gw = game_window.GameWindow(master=root)
+    # Tworzenie obiektu klasy Board
+    game_board = board.Board()
+    # Tworzenie obiektu klasu Minesweeper
+    # Do konstruktora przekazywany jest obiekt klasy GameWindow oraz obiekt klasy Board
+    ms = minesweeper.Minesweeper(game_board, gw)
+    # Rozpoczęcie gry
     ms.init_game()
-    gw.mainloop()
+    root.mainloop()
 
 
 if __name__ == "__main__":
