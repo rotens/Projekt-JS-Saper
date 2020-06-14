@@ -1,6 +1,5 @@
 """Moduł zawierający klasę odpowiedzialną za rysowanie okna gry."""
 
-
 import tkinter as tk
 
 
