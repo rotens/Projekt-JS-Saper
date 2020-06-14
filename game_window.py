@@ -8,7 +8,9 @@ import tkinter as tk
 FIELD_WIDTH = 2
 FIELD_HEIGHT = 1
 
+# Szerokość widgetu typu Entry
 ENTRY_WIDTH = 3
+
 PAD_Y = 5
 
 # Kolory
@@ -123,15 +125,15 @@ class GameWindow(tk.Frame):
     def update_fields(self, board):
         """Aktualizuje wyglad pól."""
         for row, col in board.modified_fields:
-            if not board.fields[row][col].mine:
-                self.fields[row][col]["relief"] = tk.SUNKEN
-                self.fields[row][col]["state"] = tk.DISABLED
-                self.fields[row][col]["bg"] = BASE02
-                self.fields[row][col].unbind("<Button-3>")
-                if board.get_value(row, col) != 0:
-                    self.fields[row][col]["text"] = board.get_value(row, col)
-                    color = GameWindow.values_colors[board.get_value(row, col)]
-                    self.fields[row][col]["disabledforeground"] = color
+            self.fields[row][col]["relief"] = tk.SUNKEN
+            self.fields[row][col]["state"] = tk.DISABLED
+            self.fields[row][col]["bg"] = BASE02
+            self.fields[row][col].unbind("<Button-3>")
+
+            if board.get_value(row, col) != 0:
+                self.fields[row][col]["text"] = board.get_value(row, col)
+                color = GameWindow.values_colors[board.get_value(row, col)]
+                self.fields[row][col]["disabledforeground"] = color
 
     def destroy_fields(self):
         """Niszczy przyciski reprezentujące pola."""

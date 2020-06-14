@@ -84,8 +84,10 @@ class Board(object):
             self.fields[row][col].revealed = True
             self._unrevealed_fields -= 1
             self.modified_fields = [(row, col)]
+
             if self.fields[row][col].value == 0:
                 self._reveal(row, col)
+
             return 0
 
     def _reveal(self, row, col):
@@ -163,8 +165,10 @@ class Board(object):
         """Losuje miny na planszy."""
         mines_left = self.mines
         while mines_left > 0:
+
             gen_row = random.randint(0, self.rows-1)
             gen_col = random.randint(0, self.cols-1)
+
             if not self.fields[gen_row][gen_col].mine:
                 self.fields[gen_row][gen_col].mine = True
                 self._increment_fields_values(gen_row, gen_col)
