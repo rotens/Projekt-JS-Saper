@@ -71,7 +71,6 @@ class Board(object):
         W zależności od stanu pola zwraca
         odpowiednią wartość.
         """
-
         if self.fields[row][col].flag:
             return 2
 
