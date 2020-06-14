@@ -165,7 +165,6 @@ class Board(object):
         """Losuje miny na planszy."""
         mines_left = self.mines
         while mines_left > 0:
-
             gen_row = random.randint(0, self.rows-1)
             gen_col = random.randint(0, self.cols-1)
 
