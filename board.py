@@ -149,8 +149,10 @@ class Board(object):
         """
         if self._unrevealed_fields == 0:
             return 1
+
         if self._flagged_mines == self.mines:
             return 1
+        
         return 0
 
     def is_revealed(self, row, col):
