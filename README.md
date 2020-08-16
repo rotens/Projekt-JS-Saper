@@ -1,1 +1,1 @@
-# Saper
+# Projekt z przedmiotu Języki Symboliczne
